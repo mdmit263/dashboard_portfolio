@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PMO Portfolio Dashboard</title>
+<style>
+  :root {
+    --bg: #FAFBFC;
+    --panel: #FFFFFF;
+    --border: #E4E8EE;
+    --border-strong: #D3D9E2;
+    --text: #1F2933;
+    --text-muted: #6B7280;
+    --accent: #2F5FA3;
+    --accent-dark: #1B3B6F;
+    --orange: #E8825A;
+    --green: #219653;
+    --red: #C0392B;
+    --amber: #DE8A1C;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); }
+  .banner { background: linear-gradient(90deg, #E2EFDA 0%, #DCEAD6 100%); padding: 16px 28px; border-bottom: 1px solid var(--border-strong); display: flex; justify-content: space-between; align-items: center; }
+  .banner h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  .banner .sub { margin-top: 3px; font-size: 12.5px; color: #4B5A4E; }
+  .reset-btn {
+    background: white; border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 8px 16px; font-size: 12.5px; font-weight: 600; color: var(--accent);
+    cursor: pointer; display: none; align-items: center; gap: 6px;
+  }
+  .reset-btn.show { display: flex; }
+  .reset-btn:hover { border-color: var(--accent); background: #F0F5FC; }
+
+  .content { padding: 20px 28px 40px; max-width: 1350px; margin: 0 auto; }
+
+  .caveat { background: #FFF4DE; border: 1px solid #E8C878; border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #8A6400; margin-bottom: 16px; line-height: 1.5; }
+
+  .charts-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 22px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .panel-header { background: #7CB9E8; color: #0B2E4F; font-weight: 700; font-size: 12.5px; padding: 10px 14px; text-align: center; }
+  .panel-body { padding: 16px 14px 10px; }
+  .chart-footer { margin-top: 4px; }
+
+  .bar-chart-wrap { display: flex; padding: 8px 4px 0; }
+  .y-axis { display: flex; flex-direction: column-reverse; justify-content: space-between; height: 190px; padding-right: 6px; font-size: 10px; color: var(--text-muted); text-align: right; }
+  .chart-plot { flex: 1; position: relative; height: 190px; border-left: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong); }
+  .gridline { position: absolute; left: 0; right: 0; height: 1px; background: var(--border); }
+  .bar-cluster { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 10px; height: 100%; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 46px; height: 100%; cursor: pointer; }
+  .bar { width: 100%; border-radius: 2px 2px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 3px; transition: opacity 0.15s; position: relative; }
+  .bar.dimmed { opacity: 0.25; }
+  .bar.selected { outline: 2px solid var(--accent-dark); outline-offset: -2px; }
+  .bar-value { font-size: 11px; font-weight: 700; color: var(--text); position: relative; top: -16px; }
+  .total-label { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .chart-legend { display: flex; justify-content: center; gap: 16px; margin-top: 10px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; }
+  .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+
+  .tooltip {
+    position: fixed; background: #1F2933; color: white; font-size: 11.5px; padding: 8px 11px;
+    border-radius: 6px; pointer-events: none; z-index: 50; display: none; line-height: 1.5;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+  .tooltip b { color: #A9C6F5; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 22px; }
+  .kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.15s; }
+  .kpi-card .label { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+  .kpi-card .sublabel { font-size: 11px; color: var(--border-strong); margin-top: -2px; }
+  .kpi-card .value { font-size: 26px; font-weight: 700; color: var(--text); margin-top: 6px; transition: color 0.15s; }
+
+  .fin-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 22px; }
+  .fin-panel h2 { font-size: 14px; margin: 0 0 2px; font-weight: 700; }
+  .fin-panel .subtitle { font-size: 11.5px; color: var(--text-muted); margin: 0 0 16px; }
+  .hbar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .hbar-label { width: 210px; font-size: 12.5px; color: var(--text); flex-shrink: 0; }
+  .hbar-track { flex: 1; height: 22px; position: relative; background: #F4F6F8; border-radius: 3px; }
+  .hbar-fill { height: 100%; border-radius: 3px; transition: width 0.25s; }
+  .hbar-value { font-size: 12px; font-weight: 600; color: var(--text); margin-left: 8px; white-space: nowrap; width: 110px; }
+
+  .table-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .table-panel h2 { font-size: 14px; margin: 0 0 2px; font-weight: 700; }
+  .table-panel .subtitle { font-size: 11.5px; color: var(--text-muted); margin: 0 0 12px; }
+  .table-toolbar { display: flex; align-items: center; margin-bottom: 10px; }
+  .table-search { padding: 7px 12px; border: 1px solid var(--border-strong); border-radius: 6px; font-size: 12.5px; width: 220px; outline: none; font-family: inherit; }
+  .table-count { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+  table.data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.data-table th { background: var(--accent); color: white; font-size: 11px; font-weight: 600; text-align: left; padding: 9px 16px 9px 12px; position: relative; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: none; }
+  table.data-table th.num, table.data-table td.num { text-align: right; }
+  table.data-table td { padding: 7px 12px; font-size: 12px; border-bottom: 1px solid var(--border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  table.data-table td.id { font-family: 'SFMono-Regular', Consolas, monospace; }
+  table.data-table tr:nth-child(even) td { background: #FBFCFD; }
+  table.data-table tr:hover td { background: #EEF3FA; }
+  .col-resizer {
+    position: absolute; top: 0; right: -4px; width: 9px; height: 100%; cursor: col-resize;
+    background: transparent; z-index: 3; touch-action: none;
+  }
+  .col-resizer::after {
+    content: ''; position: absolute; top: 15%; left: 50%; width: 2px; height: 70%;
+    background: rgba(255,255,255,0.55); transform: translateX(-50%);
+  }
+  .col-resizer:hover::after, .col-resizer.resizing::after { background: #FFD97D; width: 3px; }
+  .col-resizer:hover, .col-resizer.resizing { background: rgba(255,255,255,0.12); }
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+  table.data-table th:last-child .col-resizer { display: none; }
+  .pm-toggle-row { display: flex; align-items: center; gap: 10px; padding: 14px 28px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .pm-toggle-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-right: 4px; }
+  .pm-avatar {
+    display: flex; align-items: center; gap: 8px;
+    border: 2px solid transparent; border-radius: 999px;
+    padding: 4px 14px 4px 4px; cursor: pointer; user-select: none;
+    background: #F4F6F8; transition: all 0.15s;
+  }
+  .pm-avatar:hover { background: #EBF0F7; }
+  .pm-avatar.active { background: white; border-color: var(--pm-color); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .pm-avatar .circle {
+    width: 30px; height: 30px; border-radius: 50%; background: var(--pm-color);
+    color: white; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .pm-avatar .pm-name { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .pm-avatar .pm-count { font-size: 10.5px; color: var(--text-muted); }
+  .pm-avatar.dimmed { opacity: 0.45; }
+  .pm-toggle-clear { margin-left: auto; font-size: 12px; color: var(--accent); cursor: pointer; font-weight: 600; display: none; }
+  .pm-toggle-clear.show { display: block; }
+  .health-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+  .health-cell { text-align: center; }
+  .health-legend {
+    background: #FFFFFF; border: 1px solid var(--border-strong); border-radius: 8px;
+    padding: 12px 18px; margin-bottom: 16px; display: flex; align-items: center; flex-wrap: wrap; gap: 22px;
+    font-size: 12.5px; color: var(--text);
+  }
+  .health-legend .legend-title { font-weight: 700; color: var(--text); margin-right: 4px; }
+  .health-legend .legend-group { display: flex; align-items: center; gap: 10px; }
+  .health-legend .legend-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .health-legend .legend-swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .health-legend .legend-sep { width: 1px; height: 16px; background: var(--border-strong); }
+</style>
+</head>
+<body>
+<div class="banner">
+  <div>
+    <h1>PMO Portfolio Dashboard</h1>
+  </div>
+  <div class="reset-btn" id="resetBtn">✕ Clear all filters</div>
+</div>
+
+<div class="pm-toggle-row" id="pmToggleRow">
+  <span class="pm-toggle-label">Project Manager</span>
+  <span class="pm-toggle-clear" id="pmClear">Clear selection</span>
+</div>
+
+<div class="content">
+  <div class="charts-row">
+    <div class="panel">
+      <div class="panel-header">Number of Projects by Status</div>
+      <div class="panel-body"><div class="bar-chart-wrap" id="statusChart"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">Number of Projects by Schedule Health</div>
+      <div class="panel-body"><div class="bar-chart-wrap" id="scheduleChart"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">Number of Projects by Cost Health</div>
+      <div class="panel-body"><div class="bar-chart-wrap" id="costChart"></div></div>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="fin-panel">
+    <h2>Financial Metric Value</h2>
+    <div class="subtitle">by Metric Name — updates with your current filter selection</div>
+    <div id="finChart"></div>
+  </div>
+
+  <div class="table-panel">
+    <h2>Projects</h2>
+    <div class="subtitle">Reflects your current filter selection above</div>
+    <div class="health-legend">
+      <span class="legend-title">Color Key</span>
+      <div class="legend-group">
+        <span style="color:var(--text-muted); font-weight:600;">Schedule Health:</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#219653;"></span>On Time</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#E8825A;"></span>Up to 5 Days Late</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#C0392B;"></span>More Than 5 Days Late</span>
+      </div>
+      <div class="legend-sep"></div>
+      <div class="legend-group">
+        <span style="color:var(--text-muted); font-weight:600;">Cost Health:</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#219653;"></span>On Budget</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#E8825A;"></span>Up to 5% Over Budget</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:#C0392B;"></span>More Than 5% Over Budget</span>
+      </div>
+    </div>
+    <div class="table-toolbar">
+      <input type="text" class="table-search" id="tableSearch" placeholder="Search project ID or name…">
+      <div class="table-count" id="tableCount"></div>
+    </div>
+    <div class="table-scroll">
+    <table class="data-table" id="dataTable">
+      <thead>
+        <tr>
+          <th style="width:130px">Project ID<span class="col-resizer"></span></th>
+          <th style="width:320px">Name<span class="col-resizer"></span></th>
+          <th style="width:200px">Client<span class="col-resizer"></span></th>
+          <th style="width:110px">Status<span class="col-resizer"></span></th>
+          <th style="width:120px">Schedule Health<span class="col-resizer"></span></th>
+          <th style="width:110px">Cost Health<span class="col-resizer"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const RECORDS = [
+{
+"id": "M400017-02",
+"name": "M400017-02 FCB (35)",
+"client": "Voltagrid",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 5747315.0,
+"invoicing": 3103550.1,
+"accrued": 287365.75
+},
+{
+"id": "M400015-02",
+"name": "15kV GCB Version C Line-ups (46)",
+"client": "VoltaGrid",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 5493918.0,
+"invoicing": 3571046.7,
+"accrued": 274695.9
+},
+{
+"id": "M200468-01",
+"name": "15 kV Gen. Breaker Skid (18)",
+"client": "VoltaGrid",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 3003513.65,
+"invoicing": 3003513.65,
+"accrued": 3003513.65
+},
+{
+"id": "M200484-02",
+"name": "Home Site CDP",
+"client": "D-COM Energy Solutions",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 35191.0,
+"invoicing": 21899.3593,
+"accrued": 33046.34030472648
+},
+{
+"id": "M200484-03",
+"name": "Hog Barn MDP",
+"client": "D-COM Energy Solutions",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 102070.0,
+"invoicing": 65365.62800000001,
+"accrued": 99035.80808983276
+},
+{
+"id": "M400015-01",
+"name": "15 kV Gen. Breaker Skid (18)",
+"client": "Voltagrid",
+"pm": "Paul Eveleigh",
+"status": "Completed",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 2182786.08,
+"invoicing": 2182786.08,
+"accrued": 2182786.08
+},
+{
+"id": "M200483-02",
+"name": "Perry Farms MDP",
+"client": "D-COM Energy Solutions",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 135545.0,
+"invoicing": 87236.76199999999,
+"accrued": 135545.00000000003
+},
+{
+"id": "M200480-01",
+"name": "M400017-01 - 1200A, 40kA ICB (280)",
+"client": "Voltagrid",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 21114161.47,
+"invoicing": 21114161.47,
+"accrued": 0.0
+},
+{
+"id": "M200468-02",
+"name": "15kV GCB Version C",
+"client": "VoltaGrid",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 7559631.17,
+"invoicing": 7491594.489469999,
+"accrued": 7408438.5466
+},
+{
+"id": "M200484-04",
+"name": "Hog Barn CDP",
+"client": "D-COM Energy Solutions",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 36958.0,
+"invoicing": 23047.008800000003,
+"accrued": 33244.33206689476
+},
+{
+"id": "M400015-04",
+"name": "35kV Breaker Cells (82)",
+"client": "VoltaGrid",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 4761166.0,
+"invoicing": 3094757.9,
+"accrued": 238058.3
+},
+{
+"id": "M200483-03",
+"name": "Growtec MDP",
+"client": "D-COM Energy Solutions",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 162098.0,
+"invoicing": 103386.1044,
+"accrued": 162098.0
+},
+{
+"id": "M200449-03",
+"name": "15kV Generator SWGR and NGR (QTY= 20)",
+"client": "Propell",
+"pm": "Paul Eveleigh",
+"status": "Completed",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 2600000.0,
+"invoicing": 2600000.0,
+"accrued": 2600000.0
+},
+{
+"id": "M400015-03",
+"name": "35kV Switchgear (18)",
+"client": "VoltaGrid",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 3111336.0,
+"invoicing": 2831315.76,
+"accrued": 3111336.0
+},
+{
+"id": "M200471-01",
+"name": "2300 KVA Dredge Mounted Substation (2)",
+"client": "DSC Dredge",
+"pm": "Paul Eveleigh",
+"status": "Completed",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 780117.16,
+"invoicing": 780117.16,
+"accrued": 780117.16
+},
+{
+"id": "M200449-04",
+"name": "15kV Generator Switchgear and NGR (QTY= 20)",
+"client": "Propell",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 2600000.0,
+"invoicing": 1170000.0,
+"accrued": 2600000.0
+},
+{
+"id": "M200484-05",
+"name": "Deerfield MDP",
+"client": "D-COM Energy Solutions",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "On Time",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 109967.0,
+"invoicing": 70499.8437,
+"accrued": 107302.9858920635
+},
+{
+"id": "M400017-03",
+"name": "M400017-03 GCB (230)",
+"client": "Voltagrid",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "Up to 5% Over Budget",
+"contractValue": 26096030.0,
+"invoicing": 13048015.0,
+"accrued": 1304801.5
+},
+{
+"id": "M200480-03",
+"name": "M400017-03 - 1200A, 40kA GCB (230)",
+"client": "Voltagrid",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 35908137.28,
+"invoicing": 17954068.64,
+"accrued": 1795406.864
+},
+{
+"id": "M200468-04",
+"name": "ICB 35kV Breakers Cells (82)",
+"client": "VoltaGrid",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 6551364.42,
+"invoicing": 6511401.097038,
+"accrued": 6551364.42
+},
+{
+"id": "M400024-01",
+"name": "Propell Spare Parts",
+"client": "Propell",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "On Budget",
+"contractValue": 130193.5,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200509-01",
+"name": "480V & 208V Switchboards (1 each)",
+"client": "Voltagrid",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 515849.34,
+"invoicing": 335302.07100000005,
+"accrued": 497838.2215500001
+},
+{
+"id": "M200484-01",
+"name": "Home Site MDP",
+"client": "D-COM Energy Solutions",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 102040.0,
+"invoicing": 65346.416000000005,
+"accrued": 102040.0
+},
+{
+"id": "M200497-01",
+"name": "F101600-01 Transformer Enclosure",
+"client": "Enmax Power Corporation",
+"pm": "Paul Eveleigh",
+"status": "Completed",
+"scheduleHealth": "On Time",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 22489.35,
+"invoicing": 22489.35,
+"accrued": 22489.35
+},
+{
+"id": "M200484-06",
+"name": "Deerfield CDP",
+"client": "D-COM Energy Solutions",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 47517.0,
+"invoicing": 29911.951500000003,
+"accrued": 45836.3190132195
+},
+{
+"id": "M400017-01",
+"name": "M400017-01 ICB(280)",
+"client": "Voltagrid",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 15444800.0,
+"invoicing": 7722400.0,
+"accrued": 772240.0
+},
+{
+"id": "M200504-01",
+"name": "Close-Coupled Breaker (1)",
+"client": "Compass Energy Systems",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 39262.99,
+"invoicing": 39262.99,
+"accrued": 39262.99
+},
+{
+"id": "M200525-01",
+"name": "MCG MV Switchgear (Qty. 02)",
+"client": "Mission Critical Group",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 1890943.24,
+"invoicing": 1229113.106,
+"accrued": 132366.02680000002
+},
+{
+"id": "M200515-01",
+"name": "4000A Switchboard (Qty. 5)",
+"client": "Mission Critical Group",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": "On Time",
+"costHealth": "On Budget",
+"contractValue": 540498.3,
+"invoicing": 362133.861,
+"accrued": 91884.711
+},
+{
+"id": "M200516-01",
+"name": "Close-Coupled Breaker Assembly (Qty. 16)",
+"client": "Compass Energy Systems",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 560672.0,
+"invoicing": 364436.8,
+"accrued": 224268.8
+},
+{
+"id": "M200535-01",
+"name": "REV FS Tap Boxes",
+"client": "REV FS",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "On Budget",
+"contractValue": 32691.88,
+"invoicing": 0.0,
+"accrued": 32691.88
+},
+{
+"id": "M200493-01",
+"name": "5kV Switchgear Assembly (1)",
+"client": "Associated Engineering",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 417482.0,
+"invoicing": 208741.0,
+"accrued": 125244.6
+},
+{
+"id": "M200491-01",
+"name": "Custom LV Bus Duct (1) & LV Bus Tap Boxes (2)",
+"client": "Custom Electric LTD",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": null,
+"contractValue": 77979.0,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200469-01",
+"name": "M200469-01 13.8kV Switchgear",
+"client": "Full Spectrum",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 932521.0,
+"invoicing": 606138.65,
+"accrued": 746016.8
+},
+{
+"id": "M200500-01",
+"name": "MV Outdoor (1) & LV Indoor (1) Switchgears",
+"client": "Merritz Corporation",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 508833.01,
+"invoicing": 330741.45650000003,
+"accrued": 193356.5438
+},
+{
+"id": "M200537-01",
+"name": "AMSC/SaskPower 25 kV Switchgear (01)",
+"client": "AMSC",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": "On Time",
+"costHealth": "On Budget",
+"contractValue": 259823.54,
+"invoicing": 25982.354000000003,
+"accrued": 5196.4708
+},
+{
+"id": "M200494-01",
+"name": "Schneider Swgr Modification",
+"client": "Schneider Electric",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 87452.0,
+"invoicing": 0.0,
+"accrued": 295.77592214050344
+},
+{
+"id": "M200505-01",
+"name": "600V Switchgear (1)",
+"client": "Westburne Electric",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 305565.99,
+"invoicing": 275009.391,
+"accrued": 244452.792
+},
+{
+"id": "M200476-01",
+"name": "25kV Bus Duct Stations",
+"client": "Nedco",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 87410.02,
+"invoicing": 0.0,
+"accrued": 2452.77566509539
+},
+{
+"id": "M200473-01",
+"name": "Skid Mounted 15kV Switchgear",
+"client": "Graham Industrial Services",
+"pm": "Francois Ngouola",
+"status": "Completed",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 297405.07,
+"invoicing": 297405.07,
+"accrued": 294431.0193
+},
+{
+"id": "M200508-03",
+"name": "MV Switchgear (Qty. 3)",
+"client": "Enerflex - Houston",
+"pm": "Francois Ngouola",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "On Budget",
+"contractValue": 230483.56,
+"invoicing": 149814.314,
+"accrued": 18438.6848
+},
+{
+"id": "M200479-01",
+"name": "MineTek/IM14 Stepdown Transformer Feeder Skid (1)",
+"client": "CNRL - Horizon",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 184452.0,
+"invoicing": 83003.40000000001,
+"accrued": 184452.0
+},
+{
+"id": "M200502-01",
+"name": "57-2PSWB06-1 600V Switch Rack (1)",
+"client": "Worley Parsons",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 254800.0,
+"invoicing": 127400.0,
+"accrued": 63700.0
+},
+{
+"id": "M200478-01",
+"name": "1200A Wall mounted junction Boxes",
+"client": "ABB",
+"pm": "Caley Wiberg",
+"status": "Completed",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 83775.0,
+"invoicing": 83775.0,
+"accrued": 83775.0
+},
+{
+"id": "M200462-02 ",
+"name": "PLB-MV2 25kV 5-Cell Disconnect Switchgear",
+"client": "Custom Electric",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 260833.0,
+"invoicing": 169541.45,
+"accrued": 247791.35
+},
+{
+"id": "M200502-05",
+"name": "M200502-05 - Syncrude -57-2PSWB06-6 (Facilities) 600V Switch Rack (1)",
+"client": "Worley Parsons",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 227009.0,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200462-08",
+"name": "Spare Parts",
+"client": "Custom Electric",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 2495.0,
+"invoicing": 499.0,
+"accrued": 823.35
+},
+{
+"id": "M200450-02",
+"name": "Syncrude 72kV Breaker TL-1 Supply",
+"client": "Syncrude Canada Ltd",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 198080.0,
+"invoicing": 79232.0,
+"accrued": 19808.0
+},
+{
+"id": "M200462-05",
+"name": "Field Services of Supplied Equipment + Training",
+"client": "Custom Electric",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 49690.0,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200485-02",
+"name": "72kV Breaker supply",
+"client": "Suncor",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "On Budget",
+"contractValue": 204141.0,
+"invoicing": 40828.2,
+"accrued": 0.0
+},
+{
+"id": "M200462-07",
+"name": "Breaker Remote Control Panel",
+"client": "Custom Electric",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 29203.0,
+"invoicing": 5840.6,
+"accrued": 14601.5
+},
+{
+"id": "M200496-01",
+"name": "Qty 2 Transfomer termination Boxes",
+"client": "ABB Inc.",
+"pm": "Caley Wiberg",
+"status": "Completed",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 24575.0,
+"invoicing": 24575.0,
+"accrued": 24575.0
+},
+{
+"id": "M200502-06",
+"name": "57-2PSWB06-7 (Shovel Shutdow) 600V Switch Rack (1)",
+"client": "Worley Parsons",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 225502.02,
+"invoicing": 112751.01,
+"accrued": 67650.606
+},
+{
+"id": "M200502-08 ",
+"name": "M200502-08 - Syncrude - 57-2PNGR06-3, 4, 6 NGR supply",
+"client": "Worley Parsons",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 25316.0,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200462-06",
+"name": "Breaker Lift Truck & Ground Truck",
+"client": "Custom Electric",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 55835.0,
+"invoicing": 11167.0,
+"accrued": 27917.5
+},
+{
+"id": "M200502-07",
+"name": "Syncrude - 57-2PSWB06-8 (MLRD Sump) 600V Switch Rack (1)",
+"client": "Worley Parsons",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 174419.0,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200462-01",
+"name": "M200462-01 PLB-MV1 25kV Switchgear Line-Up",
+"client": "Custom Electric",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 830988.0,
+"invoicing": 540142.2000000001,
+"accrued": 581691.6
+},
+{
+"id": "M200498-01",
+"name": "MV Switchgear with pt",
+"client": "Platinum Engineering",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 146740.0,
+"invoicing": 14674.0,
+"accrued": 0.0
+},
+{
+"id": "M200462-04",
+"name": "125VDC UPS",
+"client": "Custom Electric",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 12587.0,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200474-01",
+"name": "72kV Circuit Breaker supply",
+"client": "Suncor",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 200985.0,
+"invoicing": 40197.0,
+"accrued": 10049.25
+},
+{
+"id": "M200452-01",
+"name": "Suncor Energy - Shovel Voltage Regulators",
+"client": "Suncor",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "On Time",
+"costHealth": "On Budget",
+"contractValue": 2362840.02,
+"invoicing": 1299562.0110000002,
+"accrued": 2268326.4192
+},
+{
+"id": "M200498-02",
+"name": "MV Switchgear Unit (2 No PT)",
+"client": "Platinum Engineering",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 139939.0,
+"invoicing": 13993.9,
+"accrued": 27987.800000000003
+},
+{
+"id": "M200502-04",
+"name": "M200502-03 - Syncrude - 57-2PSWB06-4 600V Switch Rack",
+"client": "Worley Parsons",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 349675.0,
+"invoicing": 174837.5,
+"accrued": 87418.75
+},
+{
+"id": "M200482-01",
+"name": "MLX-E Qty 2 25kV Breaker Skid",
+"client": "Worley Parsons",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 559894.0,
+"invoicing": 363931.1,
+"accrued": 475909.9
+},
+{
+"id": "M200462-03",
+"name": "PLB-MV3 25kV 4-Cell Disconnect Switchgear",
+"client": "Custom Electric",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 212491.0,
+"invoicing": 138119.15,
+"accrued": 169992.80000000002
+},
+{
+"id": "M200502-04 ",
+"name": "M200502-04 - Syncrude - 57-2PSWB06-5 600V Switch Rack",
+"client": "Worley Parsons",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 318226.0,
+"invoicing": 159113.0,
+"accrued": 127290.4
+},
+{
+"id": "M200485-01",
+"name": "72kV Breaker Supply",
+"client": "Suncor",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": null,
+"costHealth": "On Budget",
+"contractValue": 204141.0,
+"invoicing": 40828.2,
+"accrued": 20414.1
+},
+{
+"id": "M200450-01",
+"name": "72kV Tie Breaker Skid",
+"client": "Suncor",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 397905.0,
+"invoicing": 258638.25,
+"accrued": 119371.5
+},
+{
+"id": "M200426-01",
+"name": "72kV – 13.8kV Shovel Substation",
+"client": "Suncor Energy",
+"pm": "Caley Wiberg",
+"status": "Completed",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 3404915.04,
+"invoicing": 3404915.04,
+"accrued": 3404915.04
+},
+{
+"id": "M200498-03",
+"name": "LV Switchgear Enclosures (4)",
+"client": "Platinum Engineering",
+"pm": "Caley Wiberg",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 151832.0,
+"invoicing": 15183.2,
+"accrued": 0.0
+},
+{
+"id": "M200495-02",
+"name": "15kV Outdoor Switchgear",
+"client": "Ascent Consulting Ltd",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 333417.0,
+"invoicing": 216721.05,
+"accrued": 184762.07253971524
+},
+{
+"id": "M200489-04",
+"name": "V4 Cabinet Switchboard - C2 Variant",
+"client": "Tesla Motors",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 73597.0,
+"invoicing": 42686.26,
+"accrued": 58877.600000000006
+},
+{
+"id": "M200489-01",
+"name": "V4 Cabinet Switchboard - A1 Variant",
+"client": "Tesla Motors",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 60274.99,
+"invoicing": 56658.4906,
+"accrued": 48219.992
+},
+{
+"id": "M200530-01",
+"name": "Advanced Electrical & Motors",
+"client": "Advanced Electrical and Motor Control",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 350995.68,
+"invoicing": 35099.568,
+"accrued": 0.0
+},
+{
+"id": "M200489-03 ",
+"name": "V4 Cabinet Switchboard - C1 Variant",
+"client": "Tesla Motors",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 61042.02,
+"invoicing": 45171.0948,
+"accrued": 48833.616
+},
+{
+"id": "M200533-01",
+"name": "Enerflex (7) MV SWGR",
+"client": "Enerflex - Houston",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 840790.08,
+"invoicing": 84079.008,
+"accrued": 0.0
+},
+{
+"id": "M200468-03",
+"name": "35kV FCB (18)",
+"client": "VoltaGrid",
+"pm": "Andrew Adams",
+"status": "Completed",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 4281198.34,
+"invoicing": 3908734.08442,
+"accrued": 4281198.34
+},
+{
+"id": "M200506-02",
+"name": "600V LV Switchgear",
+"client": "PTW Energy Services",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "Up to 5% Over Budget",
+"contractValue": 246093.0,
+"invoicing": 159738.9663,
+"accrued": 142828.4524243006
+},
+{
+"id": "M200531-01",
+"name": "M200531-01 GFS Edmonton - Generator ATS",
+"client": "GFS Edmonton",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "On Time",
+"costHealth": "On Budget",
+"contractValue": 570898.0,
+"invoicing": 57089.8,
+"accrued": 0.0
+},
+{
+"id": "M200495-03",
+"name": "2-Year Recommended Spare Parts",
+"client": "Ascent Consulting Ltd",
+"pm": "Paul Eveleigh",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 23968.0,
+"invoicing": 0.0,
+"accrued": 23967.98923543181
+},
+{
+"id": "M200506-01",
+"name": "5kV MV Switchgear",
+"client": "PTW Energy Services",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 442370.0,
+"invoicing": 287319.31500000006,
+"accrued": 206398.67402307145
+},
+{
+"id": "M200527-02",
+"name": "112 4th Ave SW CDP Retrofit - CPD1 PF Controller",
+"client": "REV Field Services",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 39756.0,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200528-01",
+"name": "CAP - Watson Lake Solar IPP 3,000A 3R SWGR",
+"client": "PTW Energy",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 411530.99,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200524-01",
+"name": "Albesol Energy - Ottawa Univeristy Metering Cells (2)",
+"client": "Albesol Energy",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 61617.99,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200527-01",
+"name": "112 4th Ave SW CDP Retro Fit (PF Control Bus)",
+"client": "REV Field Services",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 33999.01,
+"invoicing": 0.0,
+"accrued": 0.0
+},
+{
+"id": "M200489-02",
+"name": "V4 Cabinet Switchboard - B1 Variant",
+"client": "Tesla Motors",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "More Than 5% Over Budget",
+"contractValue": 53543.0,
+"invoicing": 45511.55,
+"accrued": 12850.32
+},
+{
+"id": "M200527-03",
+"name": "112 4th Ave SW - CDP Retrofit - Chiller CDP",
+"client": "REV Field Services",
+"pm": "Andrew Adams",
+"status": "In Progress",
+"scheduleHealth": "More Than 5 Days Late",
+"costHealth": "On Budget",
+"contractValue": 35298.01,
+"invoicing": 0.0,
+"accrued": 0.0
+}
+];
+
+function fmtMoney(v){ return '$' + Math.round(v).toLocaleString('en-US'); }
+function fmtMoneyM(v){ return '$' + (v/1e6).toFixed(2) + 'M'; }
+
+const STATUS_COLORS = {'In Progress':'#E8825A','Completed':'#219653'};
+const SCHED_COLORS = {'On Time':'#219653','Up to 5 Days Late':'#E8825A','More Than 5 Days Late':'#C0392B'};
+const COST_COLORS = {'On Budget':'#219653','Up to 5% Over Budget':'#E8825A','More Than 5% Over Budget':'#C0392B'};
+const STATUS_ORDER = ['In Progress','Completed'];
+const SCHED_ORDER = ['On Time','Up to 5 Days Late','More Than 5 Days Late'];
+const COST_ORDER = ['On Budget','Up to 5% Over Budget','More Than 5% Over Budget'];
+
+// filter state: { status: null|value, scheduleHealth: null|value, costHealth: null|value }
+let filters = { status: null, scheduleHealth: null, costHealth: null };
+let selectedPMs = new Set(); // empty = all PMs shown
+
+function matchesFilters(r, excludeKey){
+  if (selectedPMs.size > 0 && !selectedPMs.has(r.pm)) return false;
+  for (const key of ['status','scheduleHealth','costHealth']){
+    if (key === excludeKey) continue;
+    if (filters[key] && r[key] !== filters[key]) return false;
+  }
+  return true;
+}
+function getFiltered(){
+  return RECORDS.filter(r => matchesFilters(r, null));
+}
+function anyFilterActive(){
+  return filters.status || filters.scheduleHealth || filters.costHealth || selectedPMs.size > 0;
+}
+
+const PM_COLORS = ['#2F5FA3','#C1560C','#219653','#B98900','#8E44AD','#C0392B'];
+const PM_LIST = Array.from(new Set(RECORDS.map(r=>r.pm).filter(Boolean))).sort();
+const pmColorMap = {};
+PM_LIST.forEach((pm,i)=>{ pmColorMap[pm] = PM_COLORS[i % PM_COLORS.length]; });
+
+function initials(name){
+  return name.split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+}
+
+const pmToggleRow = document.getElementById('pmToggleRow');
+PM_LIST.forEach(pm=>{
+  const count = RECORDS.filter(r=>r.pm===pm).length;
+  const btn = document.createElement('div');
+  btn.className = 'pm-avatar';
+  btn.style.setProperty('--pm-color', pmColorMap[pm]);
+  btn.innerHTML = `<span class="circle">${initials(pm)}</span><span><div class="pm-name">${pm}</div><div class="pm-count">${count} projects</div></span>`;
+  btn.addEventListener('click', ()=>{
+    if (selectedPMs.has(pm)) selectedPMs.delete(pm);
+    else selectedPMs.add(pm);
+    renderAll();
+  });
+  pmToggleRow.appendChild(btn);
+});
+document.getElementById('pmClear').addEventListener('click', ()=>{
+  selectedPMs.clear();
+  renderAll();
+});
+
+const tooltip = document.getElementById('tooltip');
+function showTooltip(e, html){
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX + 14) + 'px';
+  tooltip.style.top = (e.clientY + 14) + 'px';
+  tooltip.innerHTML = html;
+}
+function hideTooltip(){ tooltip.style.display = 'none'; }
+
+function niceMax(v){
+  if (v <= 5) return 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const norm = v / mag;
+  let nice;
+  if (norm <= 2) nice = 2; else if (norm <= 5) nice = 5; else nice = 10;
+  return nice * mag;
+}
+
+function renderBarChart(containerId, field, order, colors){
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const contextRecords = RECORDS.filter(r => matchesFilters(r, field));
+  const counts = {};
+  order.forEach(k => counts[k] = 0);
+  contextRecords.forEach(r => { if (r[field] && counts.hasOwnProperty(r[field])) counts[r[field]]++; });
+  const dataMax = Math.max(...order.map(k=>counts[k]), 1);
+  const axisMax = niceMax(dataMax);
+  const numTicks = 4;
+
+  const yAxis = document.createElement('div');
+  yAxis.className = 'y-axis';
+  for (let i=0;i<=numTicks;i++){
+    const tick = document.createElement('div');
+    tick.textContent = Math.round(axisMax/numTicks*i);
+    yAxis.appendChild(tick);
+  }
+
+  const plot = document.createElement('div');
+  plot.className = 'chart-plot';
+  for (let i=1;i<numTicks;i++){
+    const gl = document.createElement('div');
+    gl.className = 'gridline';
+    gl.style.bottom = (i/numTicks*100) + '%';
+    plot.appendChild(gl);
+  }
+
+  const cluster = document.createElement('div');
+  cluster.className = 'bar-cluster';
+  order.forEach(label=>{
+    const val = counts[label];
+    const hpct = Math.max((val/axisMax*100), val>0?3:0);
+    const isSelected = filters[field] === label;
+    const isDimmed = filters[field] && !isSelected;
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    col.innerHTML = `<span class="bar-value">${val}</span><div class="bar ${isDimmed?'dimmed':''} ${isSelected?'selected':''}" style="height:${hpct}%;background:${colors[label]}"></div>`;
+    col.addEventListener('click', ()=>{
+      filters[field] = isSelected ? null : label;
+      renderAll();
+    });
+    col.addEventListener('mousemove', (e)=>{
+      const pct = contextRecords.length ? ((val/contextRecords.length)*100).toFixed(1) : 0;
+      showTooltip(e, `<b>${label}</b><br>${val} projects (${pct}% of ${contextRecords.length})<br>Click to filter`);
+    });
+    col.addEventListener('mouseleave', hideTooltip);
+    cluster.appendChild(col);
+  });
+  plot.appendChild(cluster);
+
+  container.appendChild(yAxis);
+  container.appendChild(plot);
+
+  const panelBody = container.parentElement;
+  let footer = panelBody.querySelector('.chart-footer');
+  if (!footer){
+    footer = document.createElement('div');
+    footer.className = 'chart-footer';
+    panelBody.appendChild(footer);
+  }
+  footer.innerHTML = `<div class="total-label">Total</div><div class="chart-legend">${order.map(l=>`<span><span class="legend-dot" style="background:${colors[l]}"></span>${l}</span>`).join('')}</div>`;
+}
+
+function renderKPIs(data){
+  const activeValue = data.reduce((s,r)=>s+r.contractValue,0);
+  const totalInvoiced = data.reduce((s,r)=>s+r.invoicing,0);
+  const totalAccrued = data.reduce((s,r)=>s+r.accrued,0);
+  const kpiRow = document.getElementById('kpiRow');
+  const kpis = [
+    {label:'Total Active Project Value', sub:'Active Project Value', value: fmtMoneyM(activeValue)},
+    {label:'Total Invoiced Value', sub:'Project Invoicing Value', value: fmtMoneyM(totalInvoiced)},
+    {label:'Total Accrued Value', sub:'Total Accrued Costs', value: fmtMoneyM(totalAccrued)},
+  ];
+  kpiRow.innerHTML = '';
+  kpis.forEach(k=>{
+    const div = document.createElement('div');
+    div.className = 'kpi-card';
+    div.innerHTML = `<div class="label">${k.label}</div><div class="sublabel">${k.sub}</div><div class="value">${k.value}</div>`;
+    kpiRow.appendChild(div);
+  });
+  return {activeValue, totalInvoiced, totalAccrued};
+}
+
+function renderFinChart(totals){
+  const netDiff = totals.activeValue - totals.totalAccrued;
+  const finData = [
+    {label:'Total Active Project Value', value: totals.activeValue, color:'#A9D18E'},
+    {label:'Total Invoiced to Date', value: totals.totalInvoiced, color:'#9DC3E6'},
+    {label:'Total Accrued Sales', value: totals.totalAccrued, color:'#F4B183'},
+    {label:'Total +/- Financial Active Projects', value: netDiff, color:'#548235'},
+  ];
+  const finChart = document.getElementById('finChart');
+  finChart.innerHTML = '';
+  const maxFin = Math.max(...finData.map(d=>Math.abs(d.value)), 1);
+  finData.forEach(d=>{
+    const pct = Math.abs(d.value)/maxFin*100;
+    const row = document.createElement('div');
+    row.className = 'hbar-row';
+    row.innerHTML = `
+      <div class="hbar-label">${d.label}</div>
+      <div class="hbar-track"><div class="hbar-fill" style="width:${pct}%;background:${d.color}"></div></div>
+      <div class="hbar-value">${fmtMoney(d.value)}</div>
+    `;
+    finChart.appendChild(row);
+  });
+}
+
+function healthDot(color){ return `<span class="health-dot" style="background:${color}"></span>`; }
+
+function renderTable(data){
+  const q = document.getElementById('tableSearch').value.trim().toLowerCase();
+  const rows = data.filter(r => !q || r.id.toLowerCase().includes(q) || (r.name||'').toLowerCase().includes(q));
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="id">${r.id}</td>
+      <td>${r.name||'—'}</td>
+      <td>${r.client||'—'}</td>
+      <td>${r.status||'—'}</td>
+      <td class="health-cell" title="${r.scheduleHealth || ''}">${r.scheduleHealth ? healthDot(SCHED_COLORS[r.scheduleHealth]) : '—'}</td>
+      <td class="health-cell" title="${r.costHealth || ''}">${r.costHealth ? healthDot(COST_COLORS[r.costHealth]) : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tableCount').textContent = rows.length + ' of ' + RECORDS.length + ' projects';
+}
+
+function renderPMToggleStates(){
+  const anyPMSelected = selectedPMs.size > 0;
+  document.querySelectorAll('.pm-avatar').forEach(btn=>{
+    const pm = btn.querySelector('.pm-name').textContent;
+    const isActive = selectedPMs.has(pm);
+    btn.classList.toggle('active', isActive);
+    btn.classList.toggle('dimmed', anyPMSelected && !isActive);
+  });
+  document.getElementById('pmClear').classList.toggle('show', anyPMSelected);
+}
+
+function renderAll(){
+  renderBarChart('statusChart', 'status', STATUS_ORDER, STATUS_COLORS);
+  renderBarChart('scheduleChart', 'scheduleHealth', SCHED_ORDER, SCHED_COLORS);
+  renderBarChart('costChart', 'costHealth', COST_ORDER, COST_COLORS);
+  const filtered = getFiltered();
+  const totals = renderKPIs(filtered);
+  renderFinChart(totals);
+  renderTable(filtered);
+  renderPMToggleStates();
+  document.getElementById('resetBtn').classList.toggle('show', !!anyFilterActive());
+}
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  filters = { status: null, scheduleHealth: null, costHealth: null };
+  selectedPMs.clear();
+  renderAll();
+});
+document.getElementById('tableSearch').addEventListener('input', ()=>renderTable(getFiltered()));
+
+// ---- Resizable table columns ----
+(function initColumnResize(){
+  const table = document.getElementById('dataTable');
+  if (!table) return;
+  let activeTh = null, startX = 0, startWidth = 0;
+
+  table.querySelectorAll('th').forEach(th => {
+    const handle = th.querySelector('.col-resizer');
+    if (!handle) return;
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      activeTh = th;
+      startX = e.pageX;
+      startWidth = th.offsetWidth;
+      handle.classList.add('resizing');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!activeTh) return;
+    const newWidth = Math.max(50, startWidth + (e.pageX - startX));
+    activeTh.style.width = newWidth + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!activeTh) return;
+    const handle = activeTh.querySelector('.col-resizer');
+    if (handle) handle.classList.remove('resizing');
+    activeTh = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+
+  // Touch support
+  table.querySelectorAll('th .col-resizer').forEach(handle => {
+    handle.addEventListener('touchstart', (e) => {
+      const th = handle.closest('th');
+      activeTh = th;
+      startX = e.touches[0].pageX;
+      startWidth = th.offsetWidth;
+      handle.classList.add('resizing');
+    }, {passive: true});
+  });
+  document.addEventListener('touchmove', (e) => {
+    if (!activeTh || !e.touches[0]) return;
+    const newWidth = Math.max(50, startWidth + (e.touches[0].pageX - startX));
+    activeTh.style.width = newWidth + 'px';
+  }, {passive: true});
+  document.addEventListener('touchend', () => {
+    if (!activeTh) return;
+    const handle = activeTh.querySelector('.col-resizer');
+    if (handle) handle.classList.remove('resizing');
+    activeTh = null;
+  });
+})();
+
+renderAll();
+</script>
+</body>
+</html>
