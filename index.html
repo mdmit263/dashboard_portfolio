@@ -102,6 +102,12 @@
   .col-resizer:hover, .col-resizer.resizing { background: rgba(255,255,255,0.12); }
   .table-scroll { overflow-x: auto; max-width: 100%; }
   table.data-table th:last-child .col-resizer { display: none; }
+
+  /* Banner + PM filter row stay pinned to the top of the viewport while the
+     rest of the dashboard scrolls underneath — so the filter is always reachable. */
+  .sticky-head { position: sticky; top: 0; z-index: 20; background: var(--panel); }
+  .sticky-head.is-stuck { box-shadow: 0 4px 10px rgba(20,30,50,0.12); }
+
   .pm-toggle-row { display: flex; align-items: center; gap: 10px; padding: 14px 28px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
   .pm-toggle-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-right: 4px; }
   .pm-avatar {
@@ -137,16 +143,18 @@
 </style>
 </head>
 <body>
-<div class="banner">
-  <div>
-    <h1>PMO Portfolio Dashboard</h1>
+<div class="sticky-head" id="stickyHead">
+  <div class="banner">
+    <div>
+      <h1>PMO Portfolio Dashboard</h1>
+    </div>
+    <div class="reset-btn" id="resetBtn">✕ Clear all filters</div>
   </div>
-  <div class="reset-btn" id="resetBtn">✕ Clear all filters</div>
-</div>
 
-<div class="pm-toggle-row" id="pmToggleRow">
-  <span class="pm-toggle-label">Project Manager</span>
-  <span class="pm-toggle-clear" id="pmClear">Clear selection</span>
+  <div class="pm-toggle-row" id="pmToggleRow">
+    <span class="pm-toggle-label">Project Manager</span>
+    <span class="pm-toggle-clear" id="pmClear">Clear selection</span>
+  </div>
 </div>
 
 <div class="content">
@@ -1559,6 +1567,22 @@ document.getElementById('tableSearch').addEventListener('input', ()=>renderTable
 })();
 
 renderAll();
+
+// ===== Keep the sticky banner+PM-filter block's true height in sync, so
+// anything below it never gets covered or leaves a gap — this also
+// re-measures if the PM avatars wrap onto a second line on narrow screens. =====
+(function initStickyHeadSync(){
+  const stickyHead = document.getElementById('stickyHead');
+  function updateStickyOffset(){
+    document.documentElement.style.setProperty('--sticky-h', stickyHead.offsetHeight + 'px');
+  }
+  updateStickyOffset();
+  new ResizeObserver(updateStickyOffset).observe(stickyHead);
+  window.addEventListener('resize', updateStickyOffset);
+  window.addEventListener('scroll', () => {
+    stickyHead.classList.toggle('is-stuck', window.scrollY > 2);
+  });
+})();
 </script>
 </body>
 </html>
