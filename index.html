@@ -457,7 +457,7 @@ function renderPMToggleStates(){
 }
 
 function renderAll(){
-  renderBarChart('statusChart', 'status', STATUS_ORDER.filter(s => s !== 'Not Set'), STATUS_COLORS);  // 'Not Set' jobs stay in the table/filter but not in this chart
+  renderBarChart('statusChart', 'status', STATUS_ORDER.filter(s => s !== 'Not Set' && s !== 'On Hold'), STATUS_COLORS);  // 'Not Set' and 'On Hold' jobs stay in the table/filter but not in this chart
   renderBarChart('scheduleChart', 'scheduleHealth', SCHED_ORDER, SCHED_COLORS);
   renderBarChart('costChart', 'costHealth', COST_ORDER, COST_COLORS);
   const filtered = getFiltered();
